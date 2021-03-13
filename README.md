@@ -1,1 +1,3 @@
-This repository contains the source for our uStepperS-controlled syringe pump including hardware (StepperOnline NEMA17 motor, 3D printed lead screw linear actuator and syringe holder), firmware (uStepperS with a ATmega328PB MCU, a TMC5130 motion controller and a AEAT8800-Q24 feedback encoder) and software (ESP32-served web services and web application). Progress blog [here](https://labs.contrebande.co/autobiotique/liquid-handling/syringe-pump/).
+# Syringe Pump
+
+This repository contains the source for our open source syringe pump including hardware (StepperOnline NEMA17 motor, 3D printed lead screw linear actuator and syringe holder), firmware (uStepperS with a ATmega328PB MCU, a TMC5130 motion controller and a AEAT8800-Q24 feedback encoder) and software (ESP32-served web services and web application). Progress blog [here](https://labs.contrebande.co/autobiotique/liquid-handling/syringe-pump/).
