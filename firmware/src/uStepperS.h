@@ -143,7 +143,6 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <inttypes.h>
-#include <uStepperServo.h>
 
 #define FREEWHEELBRAKE 0	/**< Define label users can use as argument for setBrakeMode() function to specify freewheeling as brake mode. This will result in no holding torque at standstill */
 #define COOLBRAKE 1			/**< Define label users can use as argument for setBrakeMode() function to make the motor brake by shorting the two bottom FET's of the H-Bridge. This will provide less holding torque, but will significantly reduce driver heat */
