@@ -169,18 +169,15 @@ void uStepperS::setup(	uint8_t mode,
 						float pTerm, 
 						float iTerm,
 						float dTerm,
-						uint16_t dropinStepSize,
 						bool setHome,
 						uint8_t invert,
 						uint8_t runCurrent,
 						uint8_t holdCurrent)
 {
-	dropinCliSettings_t tempSettings;
 	this->pidDisabled = 1;
 	// Should setup mode etc. later
 	this->mode = mode;
 	this->fullSteps = stepsPerRevolution;
-	this->dropinStepSize = 256/dropinStepSize;
 	this->angleToStep = (float)this->fullSteps * (float)this->microSteps / 360.0;
 	this->rpmToVelocity = (float)(279620.267 * fullSteps * microSteps)/(CLOCKFREQ);
 	this->stepsPerSecondToRPM = 60.0/(this->microSteps*this->fullSteps);
@@ -205,57 +202,7 @@ void uStepperS::setup(	uint8_t mode,
 	this->encoder.Beta=5;
 	if(this->mode)
 	{
-		if(this->mode == DROPIN)
-		{
-			//Set Enable, Step and Dir signal pins from 3dPrinter controller as inputs
-			this->encoder.Beta = 2;
-			pinMode(2,INPUT);		
-			pinMode(3,INPUT);
-			pinMode(4,INPUT);
-			//Enable internal pull-up resistors on the above pins
-			digitalWrite(2,HIGH);
-			digitalWrite(3,HIGH);
-			digitalWrite(4,HIGH);
-			delay(10000);
-			attachInterrupt(0, interrupt0, FALLING);
-			attachInterrupt(1, interrupt1, CHANGE);
-			this->driver.setDeceleration( 0xFFFE );
-			this->driver.setAcceleration( 0xFFFE );
-			Serial.begin(9600);
-
-			tempSettings.P.f = pTerm;
-			tempSettings.I.f = iTerm;
-			tempSettings.D.f = dTerm;
-			tempSettings.invert = invert;
-			tempSettings.runCurrent = runCurrent;
-			tempSettings.holdCurrent = holdCurrent;
-			tempSettings.checksum = this->dropinSettingsCalcChecksum(&tempSettings);
-
-			if(tempSettings.checksum != EEPROM.read(sizeof(dropinCliSettings_t)))
-			{
-				this->dropinSettings = tempSettings;
-				this->saveDropinSettings();
-				EEPROM.put(sizeof(dropinCliSettings_t),this->dropinSettings.checksum);
-				this->loadDropinSettings();
-			}
-			else
-			{
-				if(!this->loadDropinSettings())
-				{
-					this->dropinSettings = tempSettings;
-					this->saveDropinSettings();
-					EEPROM.put(sizeof(dropinCliSettings_t),this->dropinSettings.checksum);
-					this->loadDropinSettings();
-				}
-			}
-
-			
-  			this->dropinPrintHelp();
-		}		
-		else
-		{
-			this->encoder.Beta = 4; 
-		}
+		this->encoder.Beta = 4;
 	}
 
 	if(setHome == true){
@@ -521,25 +468,9 @@ void uStepperS::stop( bool mode){
 
 void uStepperS::filterSpeedPos(posFilter_t *filter, int32_t steps)
 {
-	if(this->mode != DROPIN)
-	{
-		filter->posEst += filter->velEst * ENCODERINTPERIOD * 0.5f;
-	}
-	else
-	{
-		filter->posEst += filter->velEst * ENCODERINTPERIOD;
-	}
-	
-	
+	filter->posEst += filter->velEst * ENCODERINTPERIOD;	
 	filter->posError = (float)steps - filter->posEst;
-	if(this->mode != DROPIN)
-	{
-		filter->velIntegrator += filter->posError * PULSEFILTERKI * 0.5f;
-	}
-	else
-	{
-		filter->velIntegrator += filter->posError * PULSEFILTERKI;
-	}
+	filter->velIntegrator += filter->posError * PULSEFILTERKI * 0.5f;
 	filter->velEst = (filter->posError * PULSEFILTERKP) + filter->velIntegrator;
 }
 
@@ -565,59 +496,17 @@ void interrupt0(void)
 	{
 		PORTD &= ~(1 << 4);
 	}
-	if((PINB & (0x08)))			//CCW
-	{
-		if(!pointer->invertPidDropinDirection)
-		{
-			pointer->stepCnt-=pointer->dropinStepSize;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
-		}
-		else
-		{
-			pointer->stepCnt+=pointer->dropinStepSize;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)	
-		}
-		
-	}
-	else						//CW
-	{
-		if(!pointer->invertPidDropinDirection)
-		{
-			pointer->stepCnt+=pointer->dropinStepSize;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)	
-		}
-		else
-		{
-			pointer->stepCnt-=pointer->dropinStepSize;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
-		}
-	}
 }
 
 void TIMER1_COMPA_vect(void)
 {
 	
 	int32_t stepsMoved;
-	int32_t stepCntTemp;
-	float error;
-	float output;
 	sei();
 
 	pointer->encoder.captureAngle();
 	stepsMoved = pointer->driver.getPosition();
-	if(pointer->mode == DROPIN)
-	{	
-		cli();
-			stepCntTemp = pointer->stepCnt;
-		sei();
-
-		pointer->filterSpeedPos(&pointer->externalStepInputFilter, stepCntTemp/16);
-
-		if(!pointer->pidDisabled)
-		{
-			error = (stepCntTemp - (int32_t)(pointer->encoder.angleMoved * ENCODERDATATOSTEP))/16;
-			pointer->currentPidSpeed = pointer->externalStepInputFilter.velIntegrator;
-			pointer->pid(error);
-		}
-		return;
-	}
-	else if(pointer->mode == CLOSEDLOOP)
+	if(pointer->mode == CLOSEDLOOP)
 	{
 		if(!pointer->pidDisabled)
 		{
@@ -697,15 +586,13 @@ float uStepperS::getPidError(void)
 	return this->currentPidError;
 }
 
-float uStepperS::pid(float error)
+void uStepperS::pid(float error)
 {
 	float u;
 	float limit = abs(this->currentPidSpeed) + 10000.0;
 	static float integral;
 	static bool integralReset = 0;
 	static float errorOld, differential = 0.0;
-
-	this->currentPidError = error;
 
 	u = error*this->pTerm;
 
@@ -776,501 +663,4 @@ void uStepperS::setIntegral(float I)
 void uStepperS::setDifferential(float D)
 {
 	this->dTerm = D * ENCODERINTFREQ;
-}
-
-void uStepperS::invertDropinDir(bool invert)
-{
-	this->invertPidDropinDirection = invert;
-}
-
-void uStepperS::parseCommand(String *cmd)
-{
-  uint8_t i = 0;
-  String value;
-
-  if(cmd->charAt(2) == ';')
-  {
-    Serial.println("COMMAND NOT ACCEPTED");
-    return;
-  }
-
-  value.remove(0);
-  /****************** SET P Parameter ***************************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  if(cmd->substring(0,2) == String("P="))
-  {
-    for(i = 2;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == '.')
-      {
-        value.concat(cmd->charAt(i));
-        i++;
-        break;
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-        break;
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-    
-    for(;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-        Serial.print("COMMAND ACCEPTED. P = ");
-        Serial.println(value.toFloat(),4);
-        this->dropinSettings.P.f = value.toFloat();
-    	this->saveDropinSettings();
-        this->setProportional(value.toFloat());
-        return;
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-  }
-
-/****************** SET I Parameter ***************************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,2) == String("I="))
-  {
-    for(i = 2;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == '.')
-      {
-        value.concat(cmd->charAt(i));
-        i++;
-        break;
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-        break;
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-    
-    for(;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-        Serial.print("COMMAND ACCEPTED. I = ");
-        Serial.println(value.toFloat(),4);
-        this->dropinSettings.I.f = value.toFloat();
-    	this->saveDropinSettings();
-        this->setIntegral(value.toFloat());
-        return;
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-  }
-
-/****************** SET D Parameter ***************************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,2) == String("D="))
-  {
-    for(i = 2;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == '.')
-      {
-        value.concat(cmd->charAt(i));
-        i++;
-        break;
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-        break;
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-    
-    for(;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-        Serial.print("COMMAND ACCEPTED. D = ");
-        Serial.println(value.toFloat(),4);
-        this->dropinSettings.D.f = value.toFloat();
-    	this->saveDropinSettings();
-        this->setDifferential(value.toFloat());
-        return;
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-  }
-
-/****************** invert Direction ***************************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,6) == String("invert"))
-  {
-      if(cmd->charAt(6) != ';')
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-      if(this->invertPidDropinDirection)
-      {
-      	Serial.println(F("Direction normal!"));
-      	this->dropinSettings.invert = 0;
-    	this->saveDropinSettings();
-        this->invertDropinDir(0);
-        return;
-      }
-      else
-      {
-      	Serial.println(F("Direction inverted!"));
-      	this->dropinSettings.invert = 1;
-    	this->saveDropinSettings();
-        this->invertDropinDir(1);
-        return;
-      }
-  }
-
-  /****************** get Current Pid Error ********************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,5) == String("error"))
-  {
-      if(cmd->charAt(5) != ';')
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-      Serial.print(F("Current Error: "));
-      Serial.print(this->getPidError());
-      Serial.println(F(" Steps"));
-  }
-
-  /****************** Get run/hold current settings ************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,7) == String("current"))
-  {
-      if(cmd->charAt(7) != ';')
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-      Serial.print(F("Run Current: "));
-      Serial.print(ceil(((float)this->driver.current)/0.31));
-      Serial.println(F(" %"));
-      Serial.print(F("Hold Current: "));
-      Serial.print(ceil(((float)this->driver.holdCurrent)/0.31));
-      Serial.println(F(" %"));
-  }
-  
-  /****************** Get PID Parameters ***********************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,10) == String("parameters"))
-  {
-      if(cmd->charAt(10) != ';')
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-      Serial.print(F("P: "));
-      Serial.print(this->dropinSettings.P.f,4);
-      Serial.print(F(", "));
-      Serial.print(F("I: "));
-      Serial.print(this->dropinSettings.I.f,4);
-      Serial.print(F(", "));
-      Serial.print(F("D: "));
-      Serial.println(this->dropinSettings.D.f,4);
-  }
-
-  /****************** Help menu ********************************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,4) == String("help"))
-  {
-      if(cmd->charAt(4) != ';')
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-      this->dropinPrintHelp();
-  }
-
-/****************** SET run current ***************************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,11) == String("runCurrent="))
-  {
-    for(i = 11;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == '.')
-      {
-        value.concat(cmd->charAt(i));
-        i++;
-        break;
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-        break;
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-    
-    for(;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-      	if(value.toFloat() >= 0.0 && value.toFloat() <= 100.0)
-      	{
-      		i = (uint8_t)value.toFloat();
-    		break;	
-      	}
-      	else
-      	{
-      		Serial.println("COMMAND NOT ACCEPTED");
-        	return;
-      	}
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-
-    Serial.print("COMMAND ACCEPTED. runCurrent = ");
-    Serial.print(i);
-    Serial.println(F(" %"));
-    this->dropinSettings.runCurrent = i;
-    this->saveDropinSettings();
-    this->setCurrent(i);
-  }
-
-  /****************** SET run current ***************************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else if(cmd->substring(0,12) == String("holdCurrent="))
-  {
-    for(i = 12;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == '.')
-      {
-        value.concat(cmd->charAt(i));
-        i++;
-        break;
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-        break;
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-    
-    for(;;i++)
-    {
-      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
-      {
-        value.concat(cmd->charAt(i));
-      }
-      else if(cmd->charAt(i) == ';')
-      {
-      	if(value.toFloat() >= 0.0 && value.toFloat() <= 100.0)
-      	{
-      		i = (uint8_t)value.toFloat();
-    		break;	
-      	}
-      	else
-      	{
-      		Serial.println("COMMAND NOT ACCEPTED");
-        	return;
-      	}
-      }
-      else
-      {
-        Serial.println("COMMAND NOT ACCEPTED");
-        return;
-      }
-    }
-
-    Serial.print("COMMAND ACCEPTED. holdCurrent = ");
-    Serial.print(i);
-    Serial.println(F(" %"));
-    this->dropinSettings.holdCurrent = i;
-    this->saveDropinSettings();
-    this->setHoldCurrent(i);
-  }
-
-  /****************** DEFAULT (Reject!) ************************
-  *                                                            *
-  *                                                            *
-  **************************************************************/
-  else
-  {
-    Serial.println("COMMAND NOT ACCEPTED");
-    return;
-  }
-  
-}
-
-void uStepperS::dropinCli()
-{
-	static String stringInput;
-	static uint32_t t = millis();
-
-	while(1)
-	{
-		while(!Serial.available())
-		{
-			delay(1);
-			if((millis() - t) >= 500)
-			{
-				stringInput.remove(0);
-				t = millis();
-			}
-		}
-		t = millis();
-		stringInput += (char)Serial.read();
-		if(stringInput.lastIndexOf(';') > -1)
-		{
-		  this->parseCommand(&stringInput);
-		  stringInput.remove(0);
-		}
-	}
-}
-
-void uStepperS::dropinPrintHelp()
-{
-	Serial.println(F("uStepper S Dropin !"));
-	Serial.println(F(""));
-	Serial.println(F("Usage:"));
-	Serial.println(F("Show this command list: 'help;'"));
-	Serial.println(F("Get PID Parameters: 'parameters;'"));
-	Serial.println(F("Set Proportional constant: 'P=10.002;'"));
-	Serial.println(F("Set Integral constant: 'I=10.002;'"));
-	Serial.println(F("Set Differential constant: 'D=10.002;'"));
-	Serial.println(F("Invert Direction: 'invert;'"));
-	Serial.println(F("Get Current PID Error: 'error;'"));
-	Serial.println(F("Get Run/Hold Current Settings: 'current;'"));
-	Serial.println(F("Set Run Current (percent): 'runCurrent=50.0;'"));
-	Serial.println(F("Set Hold Current (percent): 'holdCurrent=50.0;'"));
-	Serial.println(F(""));
-	Serial.println(F(""));
-}
-
-bool uStepperS::loadDropinSettings(void)
-{
-	dropinCliSettings_t tempSettings;
-
-	EEPROM.get(0,tempSettings);
-
-	if(this->dropinSettingsCalcChecksum(&tempSettings) != tempSettings.checksum)
-	{
-		return 0;
-	}
-
-	this->dropinSettings = tempSettings;
-	this->setProportional(this->dropinSettings.P.f);
-	this->setIntegral(this->dropinSettings.I.f);
-	this->setDifferential(this->dropinSettings.D.f);
-	this->invertDropinDir((bool)this->dropinSettings.invert);
-	this->setCurrent(this->dropinSettings.runCurrent);	
-	this->setHoldCurrent(this->dropinSettings.holdCurrent);	
-	return 1;
-}
-
-void uStepperS::saveDropinSettings(void)
-{
-	this->dropinSettings.checksum = this->dropinSettingsCalcChecksum(&this->dropinSettings);
-
-	EEPROM.put(0,this->dropinSettings);
-}
-
-uint8_t uStepperS::dropinSettingsCalcChecksum(dropinCliSettings_t *settings)
-{
-	uint8_t i;
-	uint8_t checksum = 0xAA;
-	uint8_t *p = (uint8_t*)settings;
-
-	for(i=0; i < 15; i++)
-	{		
-		checksum ^= *p++;
-	}
-
-	return checksum;
 }

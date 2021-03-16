@@ -7,56 +7,55 @@
 #define FAST_REWIND_BUTTON_PIN 13
 #define SLOW_REWIND_BUTTON_PIN 2
 
-#define STEPS_PER_ROTATION 200
-#define MICROSTEPS_PER_STEP 256
+#define BUTTON_DELAY_LONG 500
+#define BUTTON_DELAY_SHORT 200
+
 #define CONTROL_THRESHOLD 10
 #define CHECK_ORIENTATION_MICROSTEPS 30
-#define STALLSENSITIVITY 2
-
+#define STEPS_PER_ROTATION 200
 
 #define MAX_RPM_SLOW 100
 #define MAX_RPM_FAST 225
 
 
-#define BUTTON_DELAY_LONG 500
-#define BUTTON_DELAY_SHORT 200
-
-
+/*
 #define SYRINGE_DIAMETER_MM 34.8
 #define DISPENSE_QUANTITY_ML 5
 #define LEAD_SCREW_PITCH 1.5
 
-
-static const float MAX_STEPS_PER_SECOND_SLOW = (MAX_RPM_SLOW / 60) * STEPS_PER_ROTATION;
-static const float MAX_STEPS_PER_SECOND_FAST = (MAX_RPM_FAST / 60) * STEPS_PER_ROTATION;
 static const float SYRINGE_DIAMETER_CM = SYRINGE_DIAMETER_MM / 10;
 static const float SYRINGE_RADIUS_CM = SYRINGE_DIAMETER_CM / 2;
 static const float SYRINGE_CIRCLE_SURFACE_AREA_CM2 = PI * pow(SYRINGE_RADIUS_CM, 2);
 static const float DISPENSE_TRAVEL_CM = DISPENSE_QUANTITY_ML / SYRINGE_CIRCLE_SURFACE_AREA_CM2;
 static const float DISPENSE_TRAVEL_MM = DISPENSE_TRAVEL_CM * 10;
 static const float DISPENSE_ROTATION_COUNT = DISPENSE_TRAVEL_MM / LEAD_SCREW_PITCH;
-static uStepperS stepper;
 
+#define MICROSTEPS_PER_STEP 256
+
+static const uint16_t MAX_STEPS_PER_SECOND_SLOW = (MAX_RPM_SLOW / 60) * STEPS_PER_ROTATION;
+static const uint16_t MAX_STEPS_PER_SECOND_FAST = (MAX_RPM_FAST / 60) * STEPS_PER_ROTATION;
+static const uint32_t DISPENSE_MICROSTEP_COUNT = DISPENSE_ROTATION_COUNT * STEPS_PER_ROTATION * MICROSTEPS_PER_STEP;
+*/
+#define MAX_STEPS_PER_SECOND_SLOW 200
+#define MAX_STEPS_PER_SECOND_FAST 600
+#define DISPENSE_MICROSTEP_COUNT 179432
+
+static uStepperS stepper;
 
 static bool ready = false;
 static bool dispensing = false;
 static bool rewinding = false;
-static float dispense_steps = -1;
-static float pos = -1;
-static float pos_last = -1;
-static float pos_start = -1;
-static float pos_target = -1;
-static float diff = -1;
-static float diff_max = -1;
-static char f2str_buffer[64];
 
-
+static int32_t pos = -1;
+static int32_t pos_last = -1;
+static int32_t pos_start = -1;
+static int32_t pos_target = -1;
+static int32_t diff = -1;
+static int32_t diff_max = -1;
 
 
 void setup() {
   Serial.begin(9600);
-
-  dispense_steps = round(DISPENSE_ROTATION_COUNT * STEPS_PER_ROTATION * MICROSTEPS_PER_STEP);
   
   // initialize LED digital pin as an output
   pinMode(DISPENSE_LED_PIN, OUTPUT);
@@ -74,11 +73,10 @@ void setup() {
     10.0, // pTerm The proportional coefficent of the DROPIN PID controller, default = 10.0
     0.0, // iTerm  The integral coefficent of the DROPIN PID controller, default = 0.0
     0.0, // dTerm  The differential coefficent of the DROPIN PID controller, default = 0.0
-    16, // dropinStepSize  number of steps per fullstep, send from external dropin controller
     true, // setHome When set to true, the encoder position is Reset. When set to false, the encoder position is not reset.
     0, // invert  Inverts the motor direction for dropin feature. 0 = NOT invert, 1 = invert. this has no effect for other modes than dropin
-    50, // runCurrent  Sets the current (in percent) to use while motor is running.
-    30 // holdCurrent Sets the current (in percent) to use while motor is NOT running
+    80, // runCurrent  Sets the current (in percent) to use while motor is running, default = 50.0
+    10 // holdCurrent Sets the current (in percent) to use while motor is NOT running, default = 30.0
   );
  
   stepper.checkOrientation(CHECK_ORIENTATION_MICROSTEPS);
@@ -89,16 +87,6 @@ void setup() {
 
   ready = true;
 }
-
-
-
-void printFloat(char* label, float value) {
-  Serial.print(label);
-  dtostrf(value, 0, 0, &f2str_buffer[0]);
-  Serial.print(f2str_buffer);
-  Serial.print("\n");
-}
-
 
 void checkDispensingPosition() {
 
@@ -112,7 +100,7 @@ void checkDispensingPosition() {
     
     if(diff == 0) {
 
-      printFloat("overshoot : ", diff_max > 0 ? diff_max : 0);
+      Serial.printf("overshoot : %d\n", diff_max > 0 ? diff_max : 0);
       
       digitalWrite(DISPENSE_LED_PIN, LOW);
       
@@ -139,11 +127,11 @@ void dispense(float maxVelocity) {
     
       pos_start = stepper.driver.getPosition();
   
-      pos_target = dispense_steps + pos_start;
+      pos_target = DISPENSE_MICROSTEP_COUNT + pos_start;
   
       stepper.setMaxVelocity(maxVelocity);
   
-      stepper.moveSteps(dispense_steps);
+      stepper.moveSteps(DISPENSE_MICROSTEP_COUNT);
       
       digitalWrite(DISPENSE_LED_PIN, HIGH);
 

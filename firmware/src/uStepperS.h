@@ -141,7 +141,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <Arduino.h>
-#include <EEPROM.h>
 #include <inttypes.h>
 
 #define FREEWHEELBRAKE 0	/**< Define label users can use as argument for setBrakeMode() function to specify freewheeling as brake mode. This will result in no holding torque at standstill */
@@ -166,24 +165,6 @@ typedef union
 	uint8_t bytes[4];	/**< binary representation, split into an array of 4 bytes*/
 }floatBytes_t;
 
-/**
- * @brief      	Struct to store dropin settings
- *
- *				This struct contains the current dropin settings, aswell as a checksum,
- *				which is used upon loading of settings from EEPROM, to determine if the 
- *				settings in the EEPROM are valid.								
- * 
- */
-typedef struct 
-{
-	floatBytes_t P;				/**< Proportional gain of the dropin PID controller	*/
-	floatBytes_t I;				/**< Integral gain of the dropin PID controller	*/			
-	floatBytes_t D;				/**< Differential gain of the dropin PID controller	*/
-	uint8_t invert;				/**< Inversion of the "direction" input in dropin mode. 0 = NOT invert, 1 = invert	*/
-	uint8_t holdCurrent;		/**< Current to use when the motor is NOT rotating. 0-100 %	*/
-	uint8_t runCurrent;			/**< Current to use when the motor is rotating. 0-100 %	*/
-	uint8_t checksum;			/**< Checksum	*/
-}dropinCliSettings_t;
 
 /**
  * @brief      	Struct for encoder velocity estimator
@@ -220,7 +201,7 @@ class uStepperS;
 
 
 #define NORMAL 	0		/**< Value defining normal mode*/	
-#define DROPIN 	1		/**< Value defining dropin mode for 3d printer/CNC controller boards*/				
+			
 #define CLOSEDLOOP 	2	/**< Value defining closed loop mode for normal library functions*/
 #define PID 	CLOSEDLOOP	/**< Value defining PID mode for normal library functions. only here for backwards compatibility*/
 
@@ -242,21 +223,6 @@ class uStepperS;
  */
 extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 
-/**
- * @brief      Used by dropin feature to take in step pulses
- *
- *             This interrupt routine is used by the dropin feature to keep
- *             track of step and direction pulses from main controller
- */
-void interrupt0(void);
-
-/**
- * @brief      Used by dropin feature to take in enable signal
- *
- *             This interrupt routine is used by the dropin feature to keep
- *             track of enable signal from main controller
- */
-void interrupt1(void);
 
 
 /**
@@ -320,8 +286,6 @@ public:
 	 *                              	controller
 	 * @param[in]  dTerm            	The differential coefficent of the DROPIN PID
 	 *                              	controller
-	 * @param[in]  dropinStepSize		number of steps per fullstep, send from
-	 *									external dropin controller   
 	 * @param[in]  setHome          	When set to true, the encoder position is
 	 *									Reset. When set to false, the encoder
 	 *									position is not reset.
@@ -336,7 +300,6 @@ public:
 				float pTerm = 10.0, 
 				float iTerm = 0.0, 
 				float dTerm = 0.0,
-				uint16_t dropinStepSize = 16,
 				bool setHome = true,
 				uint8_t invert = 0,
 				uint8_t runCurrent = 50,
@@ -641,57 +604,6 @@ public:
 	void setDifferential(float D);
 
 	/**
-	 * @brief      	This method is used to invert the drop-in direction pin interpretation.
-	 *
-	 * @param[in]  	invert - 0 = not inverted, 1 = inverted
-	 *
-	 */
-	void invertDropinDir(bool invert);
-
-	/**
-	 * @brief      	This method is used to tune Drop-in parameters.
-	 *				After tuning uStepper S, the parameters are saved in EEPROM
-	 *				
-	 * 				Usage:
-	 *				Set Proportional constant: 'P=10.002;'
-	 *				Set Integral constant: 'I=10.002;'
-	 *				Set Differential constant: 'D=10.002;'
-	 *				Invert Direction: 'invert;'
-	 *				Get Current PID Error: 'error;'
-	 *				Get Run/Hold Current Settings: 'current;'
-	 *				Set Run Current (percent): 'runCurrent=50.0;'
-	 *				Set Hold Current (percent): 'holdCurrent=50.0;'	
-	 *
-	 */	
-	void dropinCli();
-
-	/**
-	 * @brief      	This method is used for the dropinCli to take in user commands.
-	 *
-	 * @param[in]  	cmd - input from terminal for dropinCli
-	 *			
-	 */
-	void parseCommand(String *cmd);
-	
-	/**
-	 * @brief      	This method is used to print the dropinCli menu explainer:
-	 *				
-	 * 				Usage:
-	 *				Show this command list: 'help;'
-	 *				Get PID Parameters: 'parameters;'
-	 *				Set Proportional constant: 'P=10.002;'
-	 *				Set Integral constant: 'I=10.002;'
-	 *				Set Differential constant: 'D=10.002;'
-	 *				Invert Direction: 'invert;'
-	 *				Get Current PID Error: 'error;'
-	 *				Get Run/Hold Current Settings: 'current;'
-	 *				Set Run Current (percent): 'runCurrent=50.0;'
-	 *				Set Hold Current (percent): 'holdCurrent=50.0;'	
-	 *
-	 */	
-	void dropinPrintHelp();
-
-	/**
 	 * @brief      	This method is used to check the orientation of the motor connector. 
 	 *
 	 * @param[in]  	distance - the amount of degrees the motor shaft should rotate during orientation determination.
@@ -718,14 +630,12 @@ private:
 	 */
 	float maxAcceleration;
 	float maxDeceleration;
-	bool invertPidDropinDirection;
 	float rpmToVelocity;
 	float angleToStep;
 
 	uint16_t microSteps;
 	uint16_t fullSteps;
 	
-	uint16_t dropinStepSize;
 
 	int32_t stepCnt;
 
@@ -775,12 +685,8 @@ private:
 
 	void filterSpeedPos(posFilter_t *filter, int32_t steps);
 
-	float pid(float error);
+	void pid(float error);
 	
-	dropinCliSettings_t dropinSettings;
-	bool loadDropinSettings(void);
-	void saveDropinSettings(void);
-	uint8_t dropinSettingsCalcChecksum(dropinCliSettings_t *settings);
 };
 
 
