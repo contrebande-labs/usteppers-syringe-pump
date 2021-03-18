@@ -199,12 +199,6 @@ class uStepperS;
 #define MISO1 PC0  	/**< Define label for driver chip MISO pin. Not normally needed for users */
 #define SCK1 PC1 	/**< Define label for driver chip SCK pin. Not normally needed for users */
 
-
-#define NORMAL 	0		/**< Value defining normal mode*/	
-			
-#define CLOSEDLOOP 	2	/**< Value defining closed loop mode for normal library functions*/
-#define PID 	CLOSEDLOOP	/**< Value defining PID mode for normal library functions. only here for backwards compatibility*/
-
 #define CLOCKFREQ 16000000.0	/**< MCU Clock frequency */
 
 /** Frequency at which the encoder is sampled, for keeping track of angle moved and current speed 
@@ -235,26 +229,28 @@ extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 class uStepperS
 {
 
+
+static uStepperS *singleton;
+
+
+/**
+ * @brief	Constructor of uStepper class
+ */
+uStepperS();
+
+
 friend class uStepperDriver;
 friend class uStepperEncoder;
 friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
-public:			
+public:
+
+	static uStepperS* getInstance();
 
 	/** Instantiate object for the driver */
 	uStepperDriver driver;
 	
 	/** Instantiate object for the Encoder */
 	uStepperEncoder encoder;
-
-	/**
-	 * @brief	Constructor of uStepper class
-	 */
-	uStepperS();
-
-	/**
-	 * @brief	Overloaded Constructor of uStepper class
-	 */
-	uStepperS(float acceleration, float velocity);
 
 	/**
 	 * @brief	Internal function to prepare the uStepperS in the constructor
@@ -294,13 +290,8 @@ public:
 	 * @param[in]  runCurrent       	Sets the current (in percent) to use while motor is running.
 	 * @param[in]  holdCurrent      	Sets the current (in percent) to use while motor is NOT running
 	 */
-	void setup(	uint8_t mode = NORMAL,
-				uint16_t stepsPerRevolution = 200, 
-				float pTerm = 10.0, 
-				float iTerm = 0.0, 
-				float dTerm = 0.0,
+	void setup(	uint16_t stepsPerRevolution = 200, 
 				bool setHome = true,
-				uint8_t invert = 0,
 				uint8_t runCurrent = 50,
 				uint8_t holdCurrent = 30);	
 
@@ -566,29 +557,6 @@ public:
 	 */	
 	float getPidError(void);
 
-	/**
-	 * @brief      	This method is used to change the PID proportional parameter P.
-	 *
-	 * @param[in]  	P - PID proportional part P
-	 *
-	 */
-	void setProportional(float P);
-
-	/**
-	 * @brief      	This method is used to change the PID integral parameter I.
-	 *
-	 * @param[in]  	I - PID integral part I
-	 *
-	 */
-	void setIntegral(float I);
-
-	/**
-	 * @brief      	This method is used to change the PID differential parameter D.
-	 *
-	 * @param[in]  	D - PID differential part D
-	 *
-	 */
-	void setDifferential(float D);
 
 	/**
 	 * @brief      	This method is used to check the orientation of the motor connector. 
@@ -632,9 +600,6 @@ private:
 	volatile posFilter_t externalStepInputFilter;
 
 	float currentPidSpeed;
-	/** This variable is used to indicate which mode the uStepper is
-	* running in (Normal, dropin or pid)*/
-	volatile uint8_t mode;	
 	float pTerm;	
 	/** This variable contains the integral coefficient used by the PID */
 	float iTerm;		

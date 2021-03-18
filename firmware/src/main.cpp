@@ -38,9 +38,9 @@ static const uint32_t DISPENSE_MICROSTEP_COUNT = DISPENSE_ROTATION_COUNT * STEPS
 */
 #define MAX_STEPS_PER_SECOND_SLOW 200
 #define MAX_STEPS_PER_SECOND_FAST 400
-#define DISPENSE_MICROSTEP_COUNT 17943 // 179432 when p=1.5 
+#define DISPENSE_MICROSTEP_COUNT 17945 // 179432 when p=1.5 
 
-static uStepperS stepper;
+static uStepperS* uStepper = uStepperS::getInstance();
 
 static bool ready = false;
 static bool dispensing = false;
@@ -67,23 +67,16 @@ void setup() {
   pinMode(FAST_REWIND_BUTTON_PIN, INPUT);
   pinMode(SLOW_REWIND_BUTTON_PIN, INPUT);
 
-  stepper.setup(
-    CLOSEDLOOP, // mode  Default is normal mode. Pass the constant "DROPIN" to configure the uStepper to act as dropin compatible to the stepstick. Pass the constant "PID", to enable closed loop feature for regular movement functions, such as moveSteps()
+  uStepper->setup(
     STEPS_PER_ROTATION, // stepsPerRevolution  Number of fullsteps per revolution
-    10.0, // pTerm The proportional coefficent of the DROPIN PID controller, default = 10.0
-    0.0, // iTerm  The integral coefficent of the DROPIN PID controller, default = 0.0
-    0.0, // dTerm  The differential coefficent of the DROPIN PID controller, default = 0.0
     true, // setHome When set to true, the encoder position is Reset. When set to false, the encoder position is not reset.
-    0, // invert  Inverts the motor direction for dropin feature. 0 = NOT invert, 1 = invert. this has no effect for other modes than dropin
     80, // runCurrent  Sets the current (in percent) to use while motor is running, default = 50.0
     10 // holdCurrent Sets the current (in percent) to use while motor is NOT running, default = 30.0
   );
 
-  stepper.checkOrientation(CHECK_ORIENTATION_MICROSTEPS);
+  uStepper->checkOrientation(CHECK_ORIENTATION_MICROSTEPS);
 
-  stepper.setControlThreshold(CONTROL_THRESHOLD);
- 
-  stepper.disablePid();
+  uStepper->setControlThreshold(CONTROL_THRESHOLD);
 
   Serial.println("READY");
 
@@ -92,7 +85,7 @@ void setup() {
 
 void checkDispensingPosition() {
 
-  pos = stepper.driver.getPosition();
+  pos = uStepper->driver.getPosition();
 
   if(pos != pos_last) {
   
@@ -127,18 +120,17 @@ void dispense(uint16_t maxVelocity) {
       diff_max = -1;
       dispensing = true;
     
-      pos_start = stepper.driver.getPosition();
+      pos_start = uStepper->driver.getPosition();
   
       pos_target = DISPENSE_MICROSTEP_COUNT + pos_start;
   
-      stepper.setMaxVelocity(maxVelocity);
+      uStepper->setMaxVelocity(maxVelocity);
   
-      stepper.moveSteps(DISPENSE_MICROSTEP_COUNT);
+      uStepper->moveSteps(DISPENSE_MICROSTEP_COUNT);
       
       digitalWrite(DISPENSE_LED_PIN, HIGH);
 
 }
-
 
 void loop() {
 
@@ -152,9 +144,9 @@ void loop() {
 
       if (digitalRead(FAST_REWIND_BUTTON_PIN) == LOW) {
       
-        stepper.setRPM(0);
+        uStepper->setRPM(0);
         
-        stepper.driver.setHome();
+        uStepper->driver.setHome();
       
         digitalWrite(DISPENSE_LED_PIN, LOW);
         
@@ -164,9 +156,9 @@ void loop() {
       
       } else if (digitalRead(SLOW_REWIND_BUTTON_PIN) == LOW) {
       
-        stepper.stop();
+        uStepper->stop();
         
-        stepper.driver.setHome();
+        uStepper->driver.setHome();
       
         digitalWrite(DISPENSE_LED_PIN, LOW);
         
@@ -192,7 +184,7 @@ void loop() {
       
         digitalWrite(DISPENSE_LED_PIN, HIGH);
         
-        stepper.setRPM(MAX_RPM_FAST * -1);
+        uStepper->setRPM(MAX_RPM_FAST * -1);
         
         delay(BUTTON_DELAY_SHORT);
 
@@ -202,7 +194,7 @@ void loop() {
       
         digitalWrite(DISPENSE_LED_PIN, HIGH);
         
-        stepper.setRPM(MAX_RPM_SLOW * -1);
+        uStepper->setRPM(MAX_RPM_SLOW * -1);
         
         delay(BUTTON_DELAY_SHORT);
       

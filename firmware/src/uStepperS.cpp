@@ -31,11 +31,12 @@
 * @author     Thomas Hørring Olsen (thomas@ustepper.com)
 */
 #include <uStepperS.h>
-uStepperS * pointer;
+
+uStepperS* uStepperS::singleton = NULL; 
 
 uStepperS::uStepperS()
 {
-	pointer = this;
+	singleton = this;
 
 	this->microSteps = 256;
 	this->init();	
@@ -45,16 +46,13 @@ uStepperS::uStepperS()
 	this->setMaxVelocity(100.0);
 }
 
-uStepperS::uStepperS(float acceleration, float velocity)
-{
-	pointer = this;
-	this->microSteps = 256;
-	this->init();
+uStepperS* uStepperS::getInstance() {
 
-	this->setMaxAcceleration(acceleration);
-	this->setMaxVelocity(velocity);
+	if (!singleton) singleton = new uStepperS;
+
+	return singleton;
+
 }
-
 
 void uStepperS::init( void ){
 
@@ -164,25 +162,19 @@ void uStepperS::checkOrientation(float distance)
 	this->enablePid();
 }
 
-void uStepperS::setup(	uint8_t mode, 
-						uint16_t stepsPerRevolution,
-						float pTerm, 
-						float iTerm,
-						float dTerm,
+void uStepperS::setup(	uint16_t stepsPerRevolution,
 						bool setHome,
-						uint8_t invert,
 						uint8_t runCurrent,
 						uint8_t holdCurrent)
 {
 	this->pidDisabled = 1;
+
 	// Should setup mode etc. later
-	this->mode = mode;
 	this->fullSteps = stepsPerRevolution;
 	this->angleToStep = (float)this->fullSteps * (float)this->microSteps / 360.0;
 	this->rpmToVelocity = (float)(279620.267 * fullSteps * microSteps)/(CLOCKFREQ);
 	this->stepsPerSecondToRPM = 60.0/(this->microSteps*this->fullSteps);
 	this->RPMToStepsPerSecond = (this->microSteps*this->fullSteps)/60.0;
-
 
 	this->stepTime = 16777216.0/CLOCKFREQ; // 2^24/CLOCKFREQ
 	this->rpmToVel = (this->fullSteps*this->microSteps)/(60.0/this->stepTime);
@@ -199,15 +191,9 @@ void uStepperS::setup(	uint8_t mode,
 	this->setCurrent(40.0);
 	this->setHoldCurrent(0.0);	
 
-	this->encoder.Beta=5;
-	if(this->mode)
-	{
-		this->encoder.Beta = 4;
-	}
+	this->encoder.Beta = 4;
 
-	if(setHome == true){
-		encoder.setHome();
-	}
+	if(setHome == true) encoder.setHome();
 
 	this->pidDisabled = 0;
 
@@ -248,11 +234,9 @@ void uStepperS::moveAngle( float angle )
 
 void uStepperS::moveToAngle( float angle )
 {
-	float diff;
-	int32_t steps;
 
-	diff = angle - this->angleMoved();
-	steps = (int32_t)( (abs(diff) * angleToStep) + 0.5);
+	float diff = angle - this->angleMoved();
+	int32_t steps = (int32_t)( (abs(diff) * angleToStep) + 0.5);
 
 	if(diff < 0.0)
 	{
@@ -270,21 +254,21 @@ void uStepperS::enableStallguard( int8_t threshold, bool stopOnStall, float rpm 
 	this->stallThreshold = threshold;
 	this->stallStop = stopOnStall;
 
-	pointer->driver.enableStallguard( threshold, stopOnStall, rpm);
+	this->driver.enableStallguard( threshold, stopOnStall, rpm);
 
 	this->stallEnabled = true;
 }
 
 void uStepperS::disableStallguard( void )
 {
-	pointer->driver.disableStallguard();
+	this->driver.disableStallguard();
 
 	this->stallEnabled = false;
 }
 
 void uStepperS::clearStall( void ) 
 {
-	pointer->driver.clearStall();
+	this->driver.clearStall();
 }
 
 bool uStepperS::isStalled( void )
@@ -300,7 +284,7 @@ bool uStepperS::isStalled( int8_t threshold )
 		this->enableStallguard( threshold, this->stallStop, 10 );
 	}
 
-	int32_t stats = pointer->driver.readRegister(RAMP_STAT);
+	int32_t stats = this->driver.readRegister(RAMP_STAT);
 
 	// Only interested in 'status_sg', with bit position 13 (last bit in RAMP_STAT).
 	return ( stats >> 13 );
@@ -474,28 +458,30 @@ void uStepperS::filterSpeedPos(posFilter_t *filter, int32_t steps)
 	filter->velEst = (filter->posError * PULSEFILTERKP) + filter->velIntegrator;
 }
 
-
-void TIMER1_COMPA_vect(void)
-{
+void TIMER1_COMPA_vect(void) {
 	
-	int32_t stepsMoved;
 	sei();
 
+	uStepperS * pointer = uStepperS::getInstance();
+
 	pointer->encoder.captureAngle();
-	stepsMoved = pointer->driver.getPosition();
-	if(pointer->mode == CLOSEDLOOP)
-	{
-		if(!pointer->pidDisabled)
-		{
-			pointer->currentPidError = stepsMoved - pointer->encoder.angleMoved * ENCODERDATATOSTEP;
-			if(abs(pointer->currentPidError) >= pointer->controlThreshold)
-			{
-				pointer->driver.writeRegister(XACTUAL,pointer->encoder.angleMoved * ENCODERDATATOSTEP);
-				pointer->driver.writeRegister(XTARGET,pointer->driver.xTarget);
-			}
-			
-			pointer->currentPidSpeed = pointer->encoder.encoderFilter.velIntegrator * ENCODERDATATOSTEP;
+	
+	if(!pointer->pidDisabled) {
+
+		int32_t stepsMoved = pointer->driver.getPosition();
+
+		pointer->currentPidError = stepsMoved - pointer->encoder.angleMoved * ENCODERDATATOSTEP;
+
+		if(abs(pointer->currentPidError) >= pointer->controlThreshold) {
+
+			pointer->driver.writeRegister(XACTUAL, pointer->encoder.angleMoved * ENCODERDATATOSTEP);
+
+			pointer->driver.writeRegister(XTARGET, pointer->driver.xTarget);
+
 		}
+		
+		pointer->currentPidSpeed = pointer->encoder.encoderFilter.velIntegrator * ENCODERDATATOSTEP;
+
 	}
 }
 
@@ -532,16 +518,16 @@ float uStepperS::moveToEnd(bool dir, float rpm, int8_t threshold)
 
 	this->isStalled();
 	// Enable stallguard to detect hardware stop (use driver directly, as to not override user stall settings)
-	pointer->driver.enableStallguard( threshold, true, rpm );
+	this->driver.enableStallguard( threshold, true, rpm );
 
 	float length = this->encoder.getAngleMoved();
 	
 	while( !this->isStalled() ){}
 	this->stop();
-	pointer->driver.clearStall();
+	this->driver.clearStall();
 
 	// Return to normal operation
-	pointer->driver.disableStallguard();
+	this->driver.disableStallguard();
 
 	length -= this->encoder.getAngleMoved();
 	delay(1000);
@@ -551,19 +537,4 @@ float uStepperS::moveToEnd(bool dir, float rpm, int8_t threshold)
 float uStepperS::getPidError(void)
 {
 	return this->currentPidError;
-}
-
-void uStepperS::setProportional(float P)
-{
-	this->pTerm = P;
-}
-
-void uStepperS::setIntegral(float I)
-{
-	this->iTerm = I * ENCODERINTPERIOD; 
-}
-
-void uStepperS::setDifferential(float D)
-{
-	this->dTerm = D * ENCODERINTFREQ;
 }
