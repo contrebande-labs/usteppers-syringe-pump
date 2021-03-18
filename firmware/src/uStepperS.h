@@ -237,7 +237,6 @@ class uStepperS
 
 friend class uStepperDriver;
 friend class uStepperEncoder;
-friend void interrupt0(void);
 friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 public:			
 
