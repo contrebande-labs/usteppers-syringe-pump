@@ -352,7 +352,7 @@ friend class uStepperS;
 
 		void enableStealth( void );
 
-		void enableStallguard( int8_t threshold, bool stopOnStall, float rpm );
+		void enableStallguard( int8_t threshold, bool stopOnStall, uint16_t rpm );
 
 		void disableStallguard( void );
 

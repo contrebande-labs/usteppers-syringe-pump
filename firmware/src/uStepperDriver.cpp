@@ -359,7 +359,7 @@ void uStepperDriver::chipSelect(bool state)
 		PORTE |= (1 << CS_DRIVER); // Set CS HIGH
 }
 
-void uStepperDriver::enableStallguard( int8_t threshold, bool stopOnStall, float rpm)
+void uStepperDriver::enableStallguard( int8_t threshold, bool stopOnStall, uint16_t rpm)
 {
 	// Limit threshold
 	if( threshold > 63)
