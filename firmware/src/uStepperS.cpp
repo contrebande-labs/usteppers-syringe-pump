@@ -474,29 +474,6 @@ void uStepperS::filterSpeedPos(posFilter_t *filter, int32_t steps)
 	filter->velEst = (filter->posError * PULSEFILTERKP) + filter->velIntegrator;
 }
 
-void interrupt1(void)
-{
-	if(PIND & 0x04)
-	{
-		PORTD |= (1 << 4);
-	}
-	else
-	{
-		PORTD &= ~(1 << 4);
-	}
-}
-
-void interrupt0(void)
-{
-	if(PIND & 0x04)
-	{
-		PORTD |= (1 << 4);
-	}
-	else
-	{
-		PORTD &= ~(1 << 4);
-	}
-}
 
 void TIMER1_COMPA_vect(void)
 {
