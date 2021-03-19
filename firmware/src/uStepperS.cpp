@@ -96,70 +96,97 @@ float uStepperS::getDriverRPM( void )
 	return (float)velocity * this->velToRpm;
 }
 
-void uStepperS::checkOrientation(float distance)
-{
-	float startAngle;
+void uStepperS::checkOrientation(const uint16_t angleDeg) {
+
+	int32_t angleMicroDeg = ((uint32_t) angleDeg) * 1000 * 1000;
+	
 	uint8_t inverted = 0;
+
 	uint8_t noninverted = 0;
+
 	this->disablePid();
+
 	this->shaftDir = 0;
+
 	this->driver.setShaftDirection(this->shaftDir);
 	
-	startAngle = this->encoder.getAngleMoved();
-	this->moveAngle(distance);
+	int32_t startAngleMicroDeg = this->encoder.getMicroDegAngleMoved();
+
+
+	this->moveAngle(angleMicroDeg / (1000 * 1000));
+
+
+/*
+	while(this->getMotorState());
+
+	startAngleMicroDeg -= angleMicroDeg / 2;
+
+	int32_t angleMovedMilliDeg = this->encoder.getMicroDegAngleMoved();
+
+	if(angleMovedMilliDeg < startAngleMicroDeg) {
+
+		inverted++;
+
+	} else {
+
+		noninverted++;
+
+	}
+
+	startAngleMicroDeg = this->encoder.getMicroDegAngleMoved();
+
+	this->moveAngle(-angleMicroDeg / (1000 * 1000));
 
 	while(this->getMotorState());
 
-	startAngle -= distance/2.0;
-	if(this->encoder.getAngleMoved() < startAngle)
-	{
+	startAngleMicroDeg += angleMicroDeg / 2;
+
+	angleMovedMilliDeg = this->encoder.getMicroDegAngleMoved();
+
+	if(angleMovedMilliDeg > startAngleMicroDeg) {
+
 		inverted++;
-	}
-	else
-	{
+
+	} else {
+
 		noninverted++;
+
 	}
 
-	startAngle = this->encoder.getAngleMoved();
-	this->moveAngle(-distance);
+	startAngleMicroDeg = this->encoder.getMicroDegAngleMoved();
+
+	this->moveAngle(angleMicroDeg / (1000 * 1000));
 
 	while(this->getMotorState());
 
-	startAngle += distance/2.0;
-	if(this->encoder.getAngleMoved() > startAngle)
-	{
+	startAngleMicroDeg -= angleMicroDeg / 2.0;
+
+	angleMovedMilliDeg = this->encoder.getMicroDegAngleMoved();
+
+	if(angleMovedMilliDeg < startAngleMicroDeg) {
+
 		inverted++;
-	}
-	else
-	{
+
+	} else {
+
 		noninverted++;
+
 	}
 
-	startAngle = this->encoder.getAngleMoved();
-	this->moveAngle(distance);
-
-	while(this->getMotorState());
-
-	startAngle -= distance/2.0;
-	if(this->encoder.getAngleMoved() < startAngle)
-	{
-		inverted++;
-	}
-	else
-	{
-		noninverted++;
-	}
-
-	this->moveAngle(-distance);
+	this->moveAngle(-angleMicroDeg / (1000 * 1000));
 	
 	while(this->getMotorState());
 
-	if(inverted > noninverted)
-	{
+	if(inverted > noninverted) {
+
 		this->shaftDir = 1;
+
 		this->driver.setShaftDirection(this->shaftDir);
+
 	}
+
 	this->enablePid();
+*/
 }
 
 void uStepperS::setup(	uint16_t stepsPerRevolution,

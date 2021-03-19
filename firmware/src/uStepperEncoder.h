@@ -41,7 +41,7 @@
 #define ENCODERDATATOSTEP 51200.0/65536.0 /**< Constant to convert raw encoder data to 1/256th steps*/
 #define ENCODERDATATOREVOLUTIONS 60.0/65536.0 /**< Constant to convert raw encoder data to revolutions */
 #define ANGLETOENCODERDATA 65535.0/360.0 /**< Constant to convert angle to raw encoder data */
-
+#define ENCODER_DATA_TO_MICRODEGREE 5493 // (360 * 1_000_000 / 65536)
 /**
  * @brief      Prototype of class for the AEAT8800-Q24 encoder
  *
@@ -99,6 +99,9 @@ class uStepperEncoder
 		 *             	angle
 		 */
 		uint16_t getAngleRaw( void );
+
+
+		uint32_t getMicroDegAngleMoved(bool filtered = true);
 
 		/**
 		 * @brief      Returns the angle moved from reference position in degrees

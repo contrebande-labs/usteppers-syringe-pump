@@ -561,11 +561,11 @@ public:
 	/**
 	 * @brief      	This method is used to check the orientation of the motor connector. 
 	 *
-	 * @param[in]  	distance - the amount of degrees the motor shaft should rotate during orientation determination.
+	 * @param[in]  	angleMilliDeg - the amount of degrees the motor shaft should rotate during orientation determination.
 	 *			
 	 */
 
-	void checkOrientation(float distance = 10);
+	void checkOrientation(const uint16_t angleDeg = 10);
 	
 private: 
 

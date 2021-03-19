@@ -1,5 +1,4 @@
-#include "uStepperS.h"
-
+#include <uStepperS.h>
 
 #define DISPENSE_LED_PIN 3
 #define FAST_DISPENSE_5ML_BUTTON_PIN 23
@@ -11,7 +10,7 @@
 #define BUTTON_DELAY_SHORT 200
 
 #define CONTROL_THRESHOLD 10
-#define CHECK_ORIENTATION_MICROSTEPS 30
+#define CHECK_ORIENTATION_ANGLE_DEG 30
 #define STEPS_PER_ROTATION 200
 
 #define MAX_RPM_SLOW 100
@@ -74,7 +73,7 @@ void setup() {
     10 // holdCurrent Sets the current (in percent) to use while motor is NOT running, default = 30.0
   );
 
-  uStepper->checkOrientation(CHECK_ORIENTATION_MICROSTEPS);
+  uStepper->checkOrientation(CHECK_ORIENTATION_ANGLE_DEG);
 
   uStepper->setControlThreshold(CONTROL_THRESHOLD);
 

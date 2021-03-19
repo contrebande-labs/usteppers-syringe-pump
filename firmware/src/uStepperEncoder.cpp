@@ -172,6 +172,11 @@ uint16_t uStepperEncoder::getAngleRaw(void)
 	return angle;
 }
 
+uint32_t uStepperEncoder::getMicroDegAngleMoved(bool filtered) {
+
+	return (filtered == true ? this->angleMoved : this->angleMovedRaw) * ENCODER_DATA_TO_MICRODEGREE;
+	
+}
 
 float uStepperEncoder::getAngleMoved(bool filtered)
 {
@@ -183,8 +188,7 @@ float uStepperEncoder::getAngleMoved(bool filtered)
 	{
 		return this->angleMovedRaw * 0.005493164;	//360/65536
 	}
-	
-	
+
 }
 
 int32_t uStepperEncoder::getAngleMovedRaw(bool filtered)
