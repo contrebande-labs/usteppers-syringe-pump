@@ -1,39 +1,7 @@
-/********************************************************************************************
-* 	 	File: 		Encoder.cpp														*
-*		Version:    2.2.0                                           						*
-*      	Date: 		September 22nd, 2020  	                                    			*
-*      	Authors: 	Thomas Hørring Olsen                                   					*
-*					Emil Jacobsen															*
-*                                                   										*	
-*********************************************************************************************
-*	(C) 2020																				*
-*																							*
-*	uStepper ApS																			*
-*	www.ustepper.com 																		*
-*	administration@ustepper.com 															*
-*																							*
-*	The code contained in this file is released under the following open source license:	*
-*																							*
-*			Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International			*
-* 																							*
-* 	The code in this file is provided without warranty of any kind - use at own risk!		*
-* 	neither uStepper ApS nor the author, can be held responsible for any damage				*
-* 	caused by the use of the code contained in this file ! 									*
-*                                                                                           *
-********************************************************************************************/
-/**
-* @file Encoder.cpp
-*
-* @brief      Function implementations for the AEAT8800-Q24 Encoder
-*
-*             This file contains class and function implementations for the AEAT8800-Q24 Encoder.
-*
-* @author     Thomas Hørring Olsen (thomas@ustepper.com)
-*/
 #include <Controller.h>
 /* At initialition setup the SPI hardware protocal to communicate with SSI interface */
 extern Controller * pointer;
-Encoder::Encoder(void)
+Encoder::Encoder()
 {
 	/* Prepare Hardware SPI communication */
 
@@ -92,23 +60,19 @@ void Encoder::setHome(float initialAngle)
 	sei();
 }
 
-bool Encoder::detectMagnet(void)
+bool Encoder::detectMagnet()
 {
 	uint8_t status;
-
-	//this->captureAngle();
 
 	status = this->getStatus();
 
 	if((status & 0xE0) != 0x80)
-	{
 		return 0;
-	}
 
 	return 1;
 }
 
-uint16_t Encoder::captureAngle(void)
+uint16_t Encoder::captureAngle()
 {
 	pointer->setSPIMode(2);
 
@@ -162,12 +126,12 @@ uint16_t Encoder::captureAngle(void)
 	
 }
 
-float Encoder::getAngle(void)
+float Encoder::getAngle()
 {
 	return (float)angle * 0.005493164;	//360/65536  0.087890625
 }
 
-uint16_t Encoder::getAngleRaw(void)
+uint16_t Encoder::getAngleRaw()
 {
 	return angle;
 }

@@ -1,36 +1,4 @@
-/********************************************************************************************
-* 	 	File: 		Driver.cpp														*
-*		Version:    2.2.0                                           						*
-*      	Date: 		September 22nd, 2020  	                                    			*
-*      	Authors: 	Thomas Hørring Olsen                                   					*
-*					Emil Jacobsen															*
-*                                                   										*	
-*********************************************************************************************
-*	(C) 2020																				*
-*																							*
-*	uStepper ApS																			*
-*	www.ustepper.com 																		*
-*	administration@ustepper.com 															*
-*																							*
-*	The code contained in this file is released under the following open source license:	*
-*																							*
-*			Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International			*
-* 																							*
-* 	The code in this file is provided without warranty of any kind - use at own risk!		*
-* 	neither uStepper ApS nor the author, can be held responsible for any damage				*
-* 	caused by the use of the code contained in this file ! 									*
-*                                                                                           *
-* TEST *
-********************************************************************************************/
-/**
-* @file Driver.cpp
-*
-* @brief      Function implementations for the TMC5130 motor driver
-*
-*             This file contains class and function implementations for the TMC5130 motor driver.
-*
-* @author     Thomas Hørring Olsen (thomas@ustepper.com)
-*/
+// TODO : use Trinamic API library
 #include <Controller.h>
 
 extern Controller * pointer;
@@ -99,7 +67,7 @@ void Driver::init( Controller * _pointer ){
 	while(this->readRegister(VACTUAL) != 0);
 }
 
-void Driver::readMotorStatus(void)
+void Driver::readMotorStatus()
 {
 	while(TCNT1 > 15900);		//If interrupt is just about to happen, wait for it to finish
 	this->readRegister(XACTUAL);

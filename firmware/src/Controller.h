@@ -68,7 +68,7 @@ class Controller;
  *
  *			This interrupt routine is in charge of sampling the encoder, process the data and handle PID
  */
-extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
+extern "C" void TIMER1_COMPA_vect() __attribute__ ((signal,used));
 
 
 
@@ -94,7 +94,7 @@ Controller();
 
 friend class Driver;
 friend class Encoder;
-friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
+friend void TIMER1_COMPA_vect() __attribute__ ((signal,used));
 public:
 
 	static Controller* getInstance();
@@ -338,7 +338,7 @@ public:
 	 *
 	 * @return     	0 = not stalled, 1 = stalled
 	 */
-	bool isStalled(void);
+	bool isStalled();
 
 
 	/**
@@ -373,13 +373,13 @@ public:
 	 * @brief      	This method reenables the PID after being disabled.
 	 *
 	 */
-	void enablePid(void);
+	void enablePid();
 
 	/**
 	 * @brief      	This method disables the PID until calling enablePid.
 	 *
 	 */
-	void disablePid(void);
+	void disablePid();
 
 	/**
 	 * @brief      	This method sets the control threshold for the closed loop position control in microsteps - i.e. it is the allowed control error. 10 microsteps is suitable in most applications.
@@ -408,7 +408,7 @@ public:
 	 * @brief      This method returns the current PID error
 	 * @return     PID error (float)
 	 */	
-	float getPidError(void);
+	float getPidError();
 
 
 	/**

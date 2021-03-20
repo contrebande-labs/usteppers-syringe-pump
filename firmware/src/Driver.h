@@ -1,26 +1,3 @@
-/********************************************************************************************
-* 	 	File: 		Driver.h														*
-*		Version:    2.2.0                                           						*
-*      	Date: 		September 22nd, 2020  	                                    			*
-*      	Authors: 	Thomas Hørring Olsen                                   					*
-*					Emil Jacobsen															*
-*                                                   										*	
-*********************************************************************************************
-*	(C) 2020																				*
-*																							*
-*	uStepper ApS																			*
-*	www.ustepper.com 																		*
-*	administration@ustepper.com 															*
-*																							*
-*	The code contained in this file is released under the following open source license:	*
-*																							*
-*			Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International			*
-* 																							*
-* 	The code in this file is provided without warranty of any kind - use at own risk!		*
-* 	neither uStepper ApS nor the author, can be held responsible for any damage				*
-* 	caused by the use of the code contained in this file ! 									*
-*                                                                                           *
-********************************************************************************************/
 /**
 * @file Driver.h
 *
@@ -358,7 +335,7 @@ friend class Controller;
 
 		void clearStall( void );
 
-		void readMotorStatus(void);
+		void readMotorStatus();
 
 
 

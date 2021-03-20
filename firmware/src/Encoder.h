@@ -1,36 +1,3 @@
-/********************************************************************************************
-* 	 	File: 		Encoder.h														*
-*		Version:    2.2.0                                           						*
-*      	Date: 		September 22nd, 2020  	                                    			*
-*      	Authors: 	Thomas Hørring Olsen                                   					*
-*					Emil Jacobsen															*
-*                                                   										*	
-*********************************************************************************************
-*	(C) 2020																				*
-*																							*
-*	uStepper ApS																			*
-*	www.ustepper.com 																		*
-*	administration@ustepper.com 															*
-*																							*
-*	The code contained in this file is released under the following open source license:	*
-*																							*
-*			Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International			*
-* 																							*
-* 	The code in this file is provided without warranty of any kind - use at own risk!		*
-* 	neither uStepper ApS nor the author, can be held responsible for any damage				*
-* 	caused by the use of the code contained in this file ! 									*
-*                                                                                           *
-********************************************************************************************/
-/**
-* @file Encoder.h
-*
-* @brief      Function prototypes and definitions for the AEAT8800-Q24 Encoder
-*
-*             This file contains class and function prototypes for the AEAT8800-Q24 Encoder,
-*             as well as necessary constants and global variables.
-*
-* @author     Thomas Hørring Olsen (thomas@ustepper.com)
-*/
 #include <Arduino.h>
 
 #define CS PB2 /**< Chip select for AEAT-8800-Q24 - Pin 10 on ATmega328pB */
@@ -54,7 +21,7 @@ class Encoder
 		/**
 		 * @brief	Constructor of Encoder class
 		 */
-		Encoder(void);
+		Encoder();
 
 		/**
 		 * @brief		Initiation of the encoder
@@ -153,7 +120,7 @@ class Encoder
 		 *
 		 * @return     Current speed in 1/256th steps per second
 		 */
-		float getSpeed(void);
+		float getSpeed();
 
 		/**
 		 * @brief      Measure the current speed of the motor
@@ -165,7 +132,7 @@ class Encoder
 		 *
 		 * @return     Current speed in RPM
 		 */
-		float getRPM(void);
+		float getRPM();
 
 		/**
 		 * @brief      Capture the current shaft angle
@@ -196,7 +163,7 @@ class Encoder
 		 *				0: everything is OK
 		 *				1: magnet is placed either too far away or too close to the encoder
 		 */
-		bool detectMagnet(void);
+		bool detectMagnet();
 
 		/** variable used for filtering the encoder readings*/
 		volatile int32_t smoothValue;

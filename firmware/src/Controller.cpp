@@ -464,7 +464,7 @@ void Controller::filterSpeedPos(posFilter_t *filter, int32_t steps)
 	filter->velEst = (filter->posError * PULSEFILTERKP) + filter->velIntegrator;
 }
 
-void TIMER1_COMPA_vect(void) {
+void TIMER1_COMPA_vect() {
 /*
 	Controller * pointer = Controller::getInstance();
 
@@ -494,14 +494,14 @@ void Controller::setControlThreshold(float threshold)
 {
 	this->controlThreshold = threshold;
 }
-void Controller::enablePid(void)
+void Controller::enablePid()
 {
 	cli();
 	this->pidDisabled = 0;
 	sei();
 }
 
-void Controller::disablePid(void)
+void Controller::disablePid()
 {
 	cli();
 	this->pidDisabled = 1;
@@ -539,7 +539,7 @@ float Controller::moveToEnd(bool dir, float rpm, int8_t threshold)
 	return abs(length);
 }
 
-float Controller::getPidError(void)
+float Controller::getPidError()
 {
 	return this->currentPidError;
 }
