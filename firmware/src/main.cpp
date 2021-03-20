@@ -1,4 +1,4 @@
-#include <uStepperS.h>
+#include <Controller.h>
 
 #define DISPENSE_LED_PIN 3
 #define FAST_DISPENSE_5ML_BUTTON_PIN 23
@@ -10,7 +10,7 @@
 #define BUTTON_DELAY_SHORT 200
 
 #define CONTROL_THRESHOLD 10
-#define CHECK_ORIENTATION_ANGLE_DEG 30
+#define CHECK_ORIENTATION_MICROSTEPS 4266
 #define STEPS_PER_ROTATION 200
 
 #define MAX_RPM_SLOW 100
@@ -39,7 +39,7 @@ static const uint32_t DISPENSE_MICROSTEP_COUNT = DISPENSE_ROTATION_COUNT * STEPS
 #define MAX_STEPS_PER_SECOND_FAST 400
 #define DISPENSE_MICROSTEP_COUNT 17945 // 179432 when p=1.5 
 
-static uStepperS* uStepper = uStepperS::getInstance();
+static Controller* controller = Controller::getInstance();
 
 static bool ready = false;
 static bool dispensing = false;
@@ -51,6 +51,8 @@ static int32_t pos_start = -1;
 static int32_t pos_target = -1;
 static int32_t diff = -1;
 static int32_t diff_max = -1;
+
+
 
 
 void setup() {
@@ -66,18 +68,18 @@ void setup() {
   pinMode(FAST_REWIND_BUTTON_PIN, INPUT);
   pinMode(SLOW_REWIND_BUTTON_PIN, INPUT);
 
-  uStepper->setup(
+  controller->setup(
     STEPS_PER_ROTATION, // stepsPerRevolution  Number of fullsteps per revolution
     true, // setHome When set to true, the encoder position is Reset. When set to false, the encoder position is not reset.
     80, // runCurrent  Sets the current (in percent) to use while motor is running, default = 50.0
     10 // holdCurrent Sets the current (in percent) to use while motor is NOT running, default = 30.0
   );
 
-  uStepper->checkOrientation(CHECK_ORIENTATION_ANGLE_DEG);
+  controller->checkOrientation();
 
-  uStepper->setControlThreshold(CONTROL_THRESHOLD);
+  controller->setControlThreshold(CONTROL_THRESHOLD);
 
-  uStepper->setMaxDeceleration(2000000);
+  controller->setMaxDeceleration(2000000);
 
   Serial.println("READY");
 
@@ -86,7 +88,7 @@ void setup() {
 
 void checkDispensingPosition() {
 
-  pos = uStepper->driver.getPosition();
+  pos = controller->driver.getPosition();
 
   if(pos != pos_last) {
   
@@ -121,13 +123,13 @@ void dispense(uint16_t maxVelocity) {
       diff_max = -1;
       dispensing = true;
 
-      pos_start = uStepper->driver.getPosition();
+      pos_start = controller->driver.getPosition();
 
       pos_target = DISPENSE_MICROSTEP_COUNT + pos_start;
 
-      uStepper->setMaxVelocity(maxVelocity);
+      controller->setMaxVelocity(maxVelocity);
 
-      uStepper->moveSteps(DISPENSE_MICROSTEP_COUNT);
+      controller->moveSteps(DISPENSE_MICROSTEP_COUNT);
       
       digitalWrite(DISPENSE_LED_PIN, HIGH);
 
@@ -145,9 +147,9 @@ void loop() {
 
       if (digitalRead(FAST_REWIND_BUTTON_PIN) == LOW) {
       
-        uStepper->setRPM(0);
+        controller->setRPM(0);
         
-        uStepper->driver.setHome();
+        controller->driver.setHome();
       
         digitalWrite(DISPENSE_LED_PIN, LOW);
         
@@ -157,9 +159,9 @@ void loop() {
       
       } else if (digitalRead(SLOW_REWIND_BUTTON_PIN) == LOW) {
       
-        uStepper->stop();
+        controller->stop();
         
-        uStepper->driver.setHome();
+        controller->driver.setHome();
       
         digitalWrite(DISPENSE_LED_PIN, LOW);
         
@@ -185,7 +187,7 @@ void loop() {
       
         digitalWrite(DISPENSE_LED_PIN, HIGH);
         
-        uStepper->setRPM(MAX_RPM_FAST * -1);
+        controller->setRPM(MAX_RPM_FAST * -1);
         
         delay(BUTTON_DELAY_SHORT);
 
@@ -195,7 +197,7 @@ void loop() {
       
         digitalWrite(DISPENSE_LED_PIN, HIGH);
         
-        uStepper->setRPM(MAX_RPM_SLOW * -1);
+        controller->setRPM(MAX_RPM_SLOW * -1);
         
         delay(BUTTON_DELAY_SHORT);
       

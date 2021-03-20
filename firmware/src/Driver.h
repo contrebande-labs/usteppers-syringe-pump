@@ -1,5 +1,5 @@
 /********************************************************************************************
-* 	 	File: 		uStepperDriver.h														*
+* 	 	File: 		Driver.h														*
 *		Version:    2.2.0                                           						*
 *      	Date: 		September 22nd, 2020  	                                    			*
 *      	Authors: 	Thomas Hørring Olsen                                   					*
@@ -22,7 +22,7 @@
 *                                                                                           *
 ********************************************************************************************/
 /**
-* @file uStepperDriver.h
+* @file Driver.h
 *
 * @brief      Function prototypes and definitions for the TMC5130 motor driver
 *
@@ -32,7 +32,7 @@
 * @author     Thomas Hørring Olsen (thomas@ustepper.com)
 */
 #include <Arduino.h>
-#include <uStepperS.h>
+#include <Controller.h>
 
 /*  TMC5130 Register Address Defines */
 
@@ -148,16 +148,16 @@
  *             This class enables the user of the library to access the TMC5130
  *             Driver on the uStepper S board.
  */
-class uStepperDriver{
+class Driver{
 
-friend class uStepperS;
+friend class Controller;
 	public:
 		/**
 		 * @brief      Constructor
 		 *
-		 *             This is the constructor of the uStepperDriver class.
+		 *             This is the constructor of the Driver class.
 		 */
-		uStepperDriver( void );
+		Driver( void );
 
 		/**
 		 * @brief		Initiation of the motor driver
@@ -166,7 +166,7 @@ friend class uStepperS;
 		 *
 		 * @param[in]	_pointer - reference to the uStepper S object
 		 */
-		void init( uStepperS * _pointer );
+		void init( Controller * _pointer );
 
 		/**
 		 * @brief		Set the motor position
@@ -315,7 +315,7 @@ friend class uStepperS;
 		/** STOP, VELOCITY, POSITION*/
 		uint8_t mode = DRIVER_STOP;
 
-		uStepperS * pointer; 	
+		Controller * pointer; 	
 
 		uint8_t current = 16;
 		uint8_t holdCurrent = 0;

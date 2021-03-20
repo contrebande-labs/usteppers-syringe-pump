@@ -1,5 +1,5 @@
 /********************************************************************************************
-* 	 	File: 		uStepperEncoder.cpp														*
+* 	 	File: 		Encoder.cpp														*
 *		Version:    2.2.0                                           						*
 *      	Date: 		September 22nd, 2020  	                                    			*
 *      	Authors: 	Thomas Hørring Olsen                                   					*
@@ -22,7 +22,7 @@
 *                                                                                           *
 ********************************************************************************************/
 /**
-* @file uStepperEncoder.cpp
+* @file Encoder.cpp
 *
 * @brief      Function implementations for the AEAT8800-Q24 Encoder
 *
@@ -30,10 +30,10 @@
 *
 * @author     Thomas Hørring Olsen (thomas@ustepper.com)
 */
-#include <uStepperS.h>
+#include <Controller.h>
 /* At initialition setup the SPI hardware protocal to communicate with SSI interface */
-extern uStepperS * pointer;
-uStepperEncoder::uStepperEncoder(void)
+extern Controller * pointer;
+Encoder::Encoder(void)
 {
 	/* Prepare Hardware SPI communication */
 
@@ -47,7 +47,7 @@ uStepperEncoder::uStepperEncoder(void)
 	// SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL);
 }
 
-void uStepperEncoder::init(uStepperS * _pointer)
+void Encoder::init(Controller * _pointer)
 {
 	this->pointer = _pointer;
 	angle = 0;
@@ -73,7 +73,7 @@ void uStepperEncoder::init(uStepperS * _pointer)
 	sei();
 }
 
-void uStepperEncoder::setHome(float initialAngle)
+void Encoder::setHome(float initialAngle)
 {
 	cli();
 	TCNT1 = 0;
@@ -92,7 +92,7 @@ void uStepperEncoder::setHome(float initialAngle)
 	sei();
 }
 
-bool uStepperEncoder::detectMagnet(void)
+bool Encoder::detectMagnet(void)
 {
 	uint8_t status;
 
@@ -108,7 +108,7 @@ bool uStepperEncoder::detectMagnet(void)
 	return 1;
 }
 
-uint16_t uStepperEncoder::captureAngle(void)
+uint16_t Encoder::captureAngle(void)
 {
 	pointer->setSPIMode(2);
 
@@ -162,23 +162,23 @@ uint16_t uStepperEncoder::captureAngle(void)
 	
 }
 
-float uStepperEncoder::getAngle(void)
+float Encoder::getAngle(void)
 {
 	return (float)angle * 0.005493164;	//360/65536  0.087890625
 }
 
-uint16_t uStepperEncoder::getAngleRaw(void)
+uint16_t Encoder::getAngleRaw(void)
 {
 	return angle;
 }
 
-uint32_t uStepperEncoder::getMicroDegAngleMoved(bool filtered) {
+uint32_t Encoder::getMicrostepsMoved(bool filtered) {
 
 	return (filtered == true ? this->angleMoved : this->angleMovedRaw) * ENCODER_DATA_TO_MICRODEGREE;
 	
 }
 
-float uStepperEncoder::getAngleMoved(bool filtered)
+float Encoder::getAngleMoved(bool filtered)
 {
 	if(filtered == true)
 	{
@@ -191,7 +191,7 @@ float uStepperEncoder::getAngleMoved(bool filtered)
 
 }
 
-int32_t uStepperEncoder::getAngleMovedRaw(bool filtered)
+int32_t Encoder::getAngleMovedRaw(bool filtered)
 {
 	if(filtered == true)
 	{
@@ -206,22 +206,22 @@ int32_t uStepperEncoder::getAngleMovedRaw(bool filtered)
 }
 
 
-uint8_t uStepperEncoder::getStatus( void )
+uint8_t Encoder::getStatus( void )
 {
 	return this->status;
 }
 
-float uStepperEncoder::getSpeed( void )
+float Encoder::getSpeed( void )
 {
 	return pointer->encoder.encoderFilter.velIntegrator * ENCODERDATATOSTEP;
 }
 
-float uStepperEncoder::getRPM( void )
+float Encoder::getRPM( void )
 {
 	return pointer->encoder.encoderFilter.velIntegrator * ENCODERDATATOREVOLUTIONS;
 }
 
-void uStepperEncoder::chipSelect(bool state)
+void Encoder::chipSelect(bool state)
 {
 	if(state)
 		PORTD |= (1 << CS_ENCODER); // Set CS HIGH

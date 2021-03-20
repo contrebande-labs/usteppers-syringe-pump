@@ -1,142 +1,5 @@
-/********************************************************************************************
-* 	 	File: 		uStepperS.h 															*
-*		Version:    2.2.0                                           						*
-*      	Date: 		September 22nd, 2020  	                                    			*
-*      	Authors: 	Thomas Hørring Olsen                                   					*
-*					Emil Jacobsen															*
-*                                                   										*	
-*********************************************************************************************
-*	(C) 2020																				*
-*																							*
-*	uStepper ApS																			*
-*	www.ustepper.com 																		*
-*	administration@ustepper.com 															*
-*																							*
-*	The code contained in this file is released under the following open source license:	*
-*																							*
-*			Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International			*
-* 																							*
-* 	The code in this file is provided without warranty of any kind - use at own risk!		*
-* 	neither uStepper ApS nor the author, can be held responsible for any damage				*
-* 	caused by the use of the code contained in this file ! 									*
-*                                                                                           *
-********************************************************************************************/
-/**
-* @file uStepperS.h
-*
-* @brief      Function prototypes and definitions for the uStepper S library
-*
-*             This file contains class and function prototypes for the library,
-*             as well as necessary constants and global variables.
-*
-* @author     Thomas Hørring Olsen (thomas@ustepper.com)
-*
-*	\mainpage Arduino library for the uStepper S Board
-*	
-*	This is the uStepper S Arduino library, providing software functions for the different features of the uStepper S board.
-*
-*	\par Features
-*	The uStepper S library contains the following features:
-*
-*	- Dropin feature for applications like 3D printers
-*	- Closed loop PID position controller
-*	- Control of RC servo motors
-*	- Measure the current position of the shaft (absolute, multiple revolutions)
-*	- Measure the current speed of the motor 
-*	- Stall detection for use in e.g. limit detection functionality 
-*	
-*	The library uses timer 1 in order to function properly, meaning that unless the user of this library
-*	can accept the loss of some functionality, this timer is unavailable and the registers associated with these timers
-*	should not be reconfigured.
-*
-*	Timer one is used for sampling the encoder in order to provide the ability to keep track of both the current speed and the
-*	angle moved since the board was reset (or a new home position was configured). Also the drop-in features missed step detection and 
-*	correction is done in this timer. 
-*	
-*	\par EEPROM Usage information
-*	\warning
-*	\warning Please be aware that the uStepper uses the EEPROM to store settings related to the Dropin application.
-*	\warning If you are not using this, then this has no impact for your application, and you can ignore this section !
-*	\warning
-*	\warning EEPROM address 0 to 15 contains the different settings for dropin. If your application uses the EEPROM,
-*	\warning Please use another location than these !
-*
-*	\par Installation
-*	To install the uStepper S library into the Arduino IDE, perform the following steps:
-*
-*	- Go to Sketch->Include Libraries->Manage Libraries... in the arduino IDE
-*	- Search for "uStepper S", in the top right corner of the "Library Manager" window
-*	- Install uStepper S library 
-*	
-*	The library is tested with Arduino IDE 1.8.11
-*	
-*	\warning MAC users should be aware, that OSX does NOT include SILABS VCP drivers, needed to upload sketches to the uStepper S, by default. This driver should be 
-*	downloaded and installed from SILABS's website:
-*	\warning https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers
-*	\warning             The uStepper S should NOT be connected to the USB port while installing this driver !
-*	\warning This is not (commonly) a problem for windows/linux users, as these drivers are most often already included in the OS
-*
-*	\par Copyright
-*
-*	(C)2020 uStepper ApS	
-*																	
-*	www.ustepper.com 																	
-*
-*	administration@ustepper.com 														
-*																							
-*	<img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" />																
-*
-*	The code contained in this file is released under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>	
-*																							
-*	The code in this library is provided without warranty of any kind - use at own risk!		
-* 	neither uStepper ApS nor the author, can be held responsible for any damage		
-* 	caused by the use of the code contained in this library ! 	
-*
-*	\par Known Bugs
-*	- does not properly release motor in dropin mode
-*
-*	\author Thomas Hørring Olsen (thomas@ustepper.com)
-*	\par Change Log
-*	\version 2.1.0:
-*	- Fixed checkOrientation to work with Closed loop and dropin modes
-*	- Fixed stallguard feature
-*	- Modified examples to library update  
-*	\version 2.0.0:
-*	- Changed name of "brake()" function in uStepper Class to "setBrakeMode()"
-*	- Implemented "setBrakeMode()" function in uStepper Class to choose between freewheel, braking with low side fets shorted and brake with specified hold current. default = brake with low side fets shorted
-*	- "setHome" argument of ustepper class "setup" function is now used
-*	- Implemented "checkOrientation()" function in uStepper Class, to check the orientation of the motor cable, and invert direction if needed.
-*	- Added 3 moves in "checkOrientation()" function in uStepper Class, to check orientation instead of just 1
-*	- Removed check for motor cable orientation from "setup()" function in uStepper Class. Users actively needs to call the "checkOrientation" function from uStepper Class, if they need this feature, AFTER calling the "setup()" function
-*	- Disabled driver on MCU reset while setting up, to avoid the motor spinning on startup if power was removed during motor movement
-*	- Moved the absolute position counter into the encoder getangle function
-*	- Added a LP filter on the absolute position data in the encoder function (so, getAngleMoved is filtered)
-*	- Stall detection removed from timer1
-*	- Variable filter depending on mode set in setup routine
-*	- Removed obsolete things in setup routine and timer1
-*	- Made new velocity measurement for encoder values
-*	- Made the control threshold for closed loop control variable and intrduced a function for editing it
-*	- Changed timer1 interrupt frequency to 2KhZ for all other modes than DROPIN
-*	- Added option to choose how long the "checkOrientation()" function in UstepperS class should move during check
-*	- Renamed "PID" to "CLOSEDLOOP" to avoid confusing the closed loop position mode with a PID controller. PID keyword is stall accepted for backwards compatibility
-*	\version 1.0.1:
-*	- Fixed bug in functions to set acceleration and deceleration
-*	- moved a couple of functions in uStepperDriver.h from public to protected section of class
-*	- added documentation
-*	\version 1.0.0:
-*	- Bug fixes
-*	- New Dropin PID code
-*	- Added dropin CLI interface
-*	- Fixed stall detection, and added user sensitivity parameter
-*	\version 0.1.1:
-*	- Bug fixes
-*	\version 0.1.0:	
-*	- Initial release
-*	
-*/
-
-#ifndef _USTEPPER_S_H_
-#define _USTEPPER_S_H_
+#ifndef _CONTROLLER_H_
+#define _CONTROLLER_H_
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -155,16 +18,6 @@
 #define STANDSTILL 0x08	/**< Define label users can use as argument for getMotorState() function to check if motor is not currently running */
 #define STALLGUARD2 0x04	/**< Define label users can use as argument for getMotorState() function to check stallguard status */
 
-/**
- * @brief      Union to easily split a float into its binary representation
- * 
- */
-typedef union
-{
-	float f;			/**< normal float value*/
-	uint8_t bytes[4];	/**< binary representation, split into an array of 4 bytes*/
-}floatBytes_t;
-
 
 /**
  * @brief      	Struct for encoder velocity estimator
@@ -180,9 +33,9 @@ typedef struct
 }posFilter_t;
 
 
-class uStepperS;
-#include <uStepperEncoder.h>
-#include <uStepperDriver.h>
+class Controller;
+#include <Encoder.h>
+#include <Driver.h>
 
 #define HARD 0	/**< Define label users can use as argument for stop() function to specify that the motor should stop immediately (without decelerating) */
 #define SOFT 1	/**< Define label users can use as argument for stop() function to specify that the motor should decelerate before stopping */
@@ -226,34 +79,34 @@ extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
  *             This class enables the user of the library to access all features
  *             of the uStepper S board, by use of a single object.
  */
-class uStepperS
+class Controller
 {
 
 
-static uStepperS *singleton;
+static Controller *singleton;
 
 
 /**
  * @brief	Constructor of uStepper class
  */
-uStepperS();
+Controller();
 
 
-friend class uStepperDriver;
-friend class uStepperEncoder;
+friend class Driver;
+friend class Encoder;
 friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 public:
 
-	static uStepperS* getInstance();
+	static Controller* getInstance();
 
 	/** Instantiate object for the driver */
-	uStepperDriver driver;
+	Driver driver;
 	
 	/** Instantiate object for the Encoder */
-	uStepperEncoder encoder;
+	Encoder encoder;
 
 	/**
-	 * @brief	Internal function to prepare the uStepperS in the constructor
+	 * @brief	Internal function to prepare the Controller in the constructor
 	 */
 	void init( void );
 
@@ -565,7 +418,7 @@ public:
 	 *			
 	 */
 
-	void checkOrientation(const uint16_t angleDeg = 10);
+	void checkOrientation(const uint16_t microsteps = 1422);
 	
 private: 
 

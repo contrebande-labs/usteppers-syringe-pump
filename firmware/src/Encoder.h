@@ -1,5 +1,5 @@
 /********************************************************************************************
-* 	 	File: 		uStepperEncoder.h														*
+* 	 	File: 		Encoder.h														*
 *		Version:    2.2.0                                           						*
 *      	Date: 		September 22nd, 2020  	                                    			*
 *      	Authors: 	Thomas Hørring Olsen                                   					*
@@ -22,7 +22,7 @@
 *                                                                                           *
 ********************************************************************************************/
 /**
-* @file uStepperEncoder.h
+* @file Encoder.h
 *
 * @brief      Function prototypes and definitions for the AEAT8800-Q24 Encoder
 *
@@ -48,13 +48,13 @@
  *             This class enables the user of the library to access the AEAT8800-Q24
  *             encoder on the uStepper S board.
  */
-class uStepperEncoder
+class Encoder
 {
 	public:
 		/**
-		 * @brief	Constructor of uStepperEncoder class
+		 * @brief	Constructor of Encoder class
 		 */
-		uStepperEncoder(void);
+		Encoder(void);
 
 		/**
 		 * @brief		Initiation of the encoder
@@ -63,7 +63,7 @@ class uStepperEncoder
 		 *
 		 * @param[in]	_pointer - reference to the uStepper S object
 		 */
-		void init( uStepperS * _pointer );
+		void init( Controller * _pointer );
 
 		/**
 		 * @brief      Define new reference(home) position
@@ -101,7 +101,7 @@ class uStepperEncoder
 		uint16_t getAngleRaw( void );
 
 
-		uint32_t getMicroDegAngleMoved(bool filtered = true);
+		uint32_t getMicrostepsMoved(bool filtered = true);
 
 		/**
 		 * @brief      Returns the angle moved from reference position in degrees
@@ -235,7 +235,7 @@ class uStepperEncoder
 	private:
 		
 		/** Reference to the main object */
-		uStepperS * pointer;
+		Controller * pointer;
 
 		/**
 		 * @brief      Set the output level of the chip select pin

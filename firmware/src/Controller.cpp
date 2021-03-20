@@ -1,40 +1,15 @@
-/********************************************************************************************
-* 	 	File: 		uStepperS.cpp															*
-*		Version:    2.2.0                                           						*
-*      	Date: 		September 22nd, 2020  	                                    			*
-*      	Authors: 	Thomas Hørring Olsen                                   					*
-*					Emil Jacobsen															*
-*                                                   										*	
-*********************************************************************************************
-*	(C) 2020																				*
-*																							*
-*	uStepper ApS																			*
-*	www.ustepper.com 																		*
-*	administration@ustepper.com 															*
-*																							*
-*	The code contained in this file is released under the following open source license:	*
-*																							*
-*			Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International			*
-* 																							*
-* 	The code in this file is provided without warranty of any kind - use at own risk!		*
-* 	neither uStepper ApS nor the author, can be held responsible for any damage				*
-* 	caused by the use of the code contained in this file ! 									*
-*                                                                                           *
-********************************************************************************************/
-/**
-* @file uStepperS.cpp
-*
-* @brief      Function and class implementation for the uStepper S library
-*
-*             This file contains class and function implementations for the library.
-*
-* @author     Thomas Hørring Olsen (thomas@ustepper.com)
+#include <Controller.h>
+
+
+/*
+
+Change step, angle, etc. pour microsteps uniquement
+
 */
-#include <uStepperS.h>
 
-uStepperS* uStepperS::singleton = NULL; 
+Controller* Controller::singleton = NULL; 
 
-uStepperS::uStepperS()
+Controller::Controller()
 {
 	singleton = this;
 
@@ -46,18 +21,17 @@ uStepperS::uStepperS()
 	this->setMaxVelocity(100.0);
 }
 
-uStepperS* uStepperS::getInstance() {
+Controller* Controller::getInstance() {
 
-	if (!singleton) singleton = new uStepperS;
+	if (!singleton) singleton = new Controller;
 
 	return singleton;
 
 }
 
-void uStepperS::init( void ){
+void Controller::init( void ){
 
 	
-	this->pidDisabled = 1;
 	/* Set CS, MOSI, SCK and DRV_ENN as Output */
 	DDRC = (1<<SCK1)|(1<<MOSI_ENC);
 	DDRD = (1<<DRV_ENN)|(1<<SD_MODE)|(1<<CS_ENCODER);
@@ -79,7 +53,7 @@ void uStepperS::init( void ){
 	PORTD &= ~(1 << DRV_ENN);  // Set DRV_ENN LOW
 }
 
-bool uStepperS::getMotorState(uint8_t statusType)
+bool Controller::getMotorState(uint8_t statusType)
 {
 	this->driver.readMotorStatus();
 	if(this->driver.status & statusType)
@@ -89,20 +63,20 @@ bool uStepperS::getMotorState(uint8_t statusType)
 	return 1;
 }
 
-float uStepperS::getDriverRPM( void )
+float Controller::getDriverRPM( void )
 {
 	int32_t velocity = this->driver.getVelocity();
 
 	return (float)velocity * this->velToRpm;
 }
 
-void uStepperS::checkOrientation(const uint16_t angleDeg) {
-
-	int32_t angleMicroDeg = ((uint32_t) angleDeg) * 1000 * 1000;
-	
+void Controller::checkOrientation(const uint16_t microsteps) {
+	/*
 	uint8_t inverted = 0;
 
 	uint8_t noninverted = 0;
+
+	int32_t startAngleMicroDeg = 0;
 
 	this->disablePid();
 
@@ -110,13 +84,19 @@ void uStepperS::checkOrientation(const uint16_t angleDeg) {
 
 	this->driver.setShaftDirection(this->shaftDir);
 	
-	int32_t startAngleMicroDeg = this->encoder.getMicroDegAngleMoved();
+	startAngleMicroDeg += this->encoder.getMicroDegAngleMoved();
+
+	int32_t motorStepCount = 200;
+
+	int32_t microstepCount = 200;
+
+	int32_t encoderStepCount = 65535;
+
+	Serial.println((234 * motorStepCount * microstepCount) / encoderStepCount);
 
 
 	this->moveAngle(angleMicroDeg / (1000 * 1000));
 
-
-/*
 	while(this->getMotorState());
 
 	startAngleMicroDeg -= angleMicroDeg / 2;
@@ -189,12 +169,11 @@ void uStepperS::checkOrientation(const uint16_t angleDeg) {
 */
 }
 
-void uStepperS::setup(	uint16_t stepsPerRevolution,
+void Controller::setup(	uint16_t stepsPerRevolution,
 						bool setHome,
 						uint8_t runCurrent,
 						uint8_t holdCurrent)
 {
-	this->pidDisabled = 1;
 
 	// Should setup mode etc. later
 	this->fullSteps = stepsPerRevolution;
@@ -227,7 +206,7 @@ void uStepperS::setup(	uint16_t stepsPerRevolution,
 	DDRB |= (1 << 4);
 }
 
-void uStepperS::moveSteps( int32_t steps )
+void Controller::moveSteps( int32_t steps )
 {
 	this->driver.setDeceleration( (uint16_t)( this->maxDeceleration ) );
 	this->driver.setAcceleration( (uint16_t)(this->maxAcceleration ) );
@@ -242,7 +221,7 @@ void uStepperS::moveSteps( int32_t steps )
 
 
 
-void uStepperS::moveAngle( float angle )
+void Controller::moveAngle( float angle )
 {
 	int32_t steps;
 
@@ -259,7 +238,7 @@ void uStepperS::moveAngle( float angle )
 }
 
 
-void uStepperS::moveToAngle( float angle )
+void Controller::moveToAngle( float angle )
 {
 
 	float diff = angle - this->angleMoved();
@@ -275,7 +254,7 @@ void uStepperS::moveToAngle( float angle )
 	}
 }
 
-void uStepperS::enableStallguard( int8_t threshold, bool stopOnStall, float rpm )
+void Controller::enableStallguard( int8_t threshold, bool stopOnStall, float rpm )
 {
 	this->clearStall();
 	this->stallThreshold = threshold;
@@ -286,24 +265,24 @@ void uStepperS::enableStallguard( int8_t threshold, bool stopOnStall, float rpm 
 	this->stallEnabled = true;
 }
 
-void uStepperS::disableStallguard( void )
+void Controller::disableStallguard( void )
 {
 	this->driver.disableStallguard();
 
 	this->stallEnabled = false;
 }
 
-void uStepperS::clearStall( void ) 
+void Controller::clearStall( void ) 
 {
 	this->driver.clearStall();
 }
 
-bool uStepperS::isStalled( void )
+bool Controller::isStalled( void )
 {
 	return this->isStalled( this->stallThreshold );
 }
 
-bool uStepperS::isStalled( int8_t threshold )
+bool Controller::isStalled( int8_t threshold )
 {	
 	// If the threshold is different from what is configured..
 	if( threshold != this->stallThreshold || this->stallEnabled == false ){
@@ -317,7 +296,7 @@ bool uStepperS::isStalled( int8_t threshold )
 	return ( stats >> 13 );
 }
 
-void uStepperS::setBrakeMode( uint8_t mode, float brakeCurrent )
+void Controller::setBrakeMode( uint8_t mode, float brakeCurrent )
 {
 	int32_t registerContent = this->driver.readRegister(PWMCONF);
 	registerContent &= ~(3UL << 20);
@@ -338,7 +317,7 @@ void uStepperS::setBrakeMode( uint8_t mode, float brakeCurrent )
 	}
 }
 
-void uStepperS::setRPM( float rpm)
+void Controller::setRPM( float rpm)
 {
 	int32_t velocityDir = rpmToVelocity * rpm;
 
@@ -355,7 +334,7 @@ void uStepperS::setRPM( float rpm)
 }
 
 
-void uStepperS::setSPIMode( uint8_t mode ){
+void Controller::setSPIMode( uint8_t mode ){
 
 	switch(mode){
 		case 2:
@@ -370,7 +349,7 @@ void uStepperS::setSPIMode( uint8_t mode ){
 	}
 }
 
-uint8_t uStepperS::SPI(uint8_t data){
+uint8_t Controller::SPI(uint8_t data){
 
 	SPDR1 = data;
 
@@ -381,7 +360,7 @@ uint8_t uStepperS::SPI(uint8_t data){
 
 }
 
-void uStepperS::setMaxVelocity( float velocity )
+void Controller::setMaxVelocity( float velocity )
 {
 	velocity *= (float)this->microSteps;
 	velocity = abs(velocity)*VELOCITYCONVERSION;
@@ -392,7 +371,7 @@ void uStepperS::setMaxVelocity( float velocity )
 	this->driver.setVelocity( (uint32_t)( this->maxVelocity  ) );
 }
 
-void uStepperS::setMaxAcceleration( float acceleration )
+void Controller::setMaxAcceleration( float acceleration )
 {
 	acceleration *= (float)this->microSteps;
 	acceleration = abs(acceleration) * ACCELERATIONCONVERSION;
@@ -404,7 +383,7 @@ void uStepperS::setMaxAcceleration( float acceleration )
 	this->driver.setAcceleration( (uint32_t)(this->maxAcceleration ) );
 }
 
-void uStepperS::setMaxDeceleration( float deceleration )
+void Controller::setMaxDeceleration( float deceleration )
 {
 	deceleration *= (float)this->microSteps;
 	deceleration = abs(deceleration) * ACCELERATIONCONVERSION;
@@ -415,7 +394,7 @@ void uStepperS::setMaxDeceleration( float deceleration )
 	this->driver.setDeceleration( (uint32_t)(this->maxDeceleration ) );
 }
 
-void uStepperS::setCurrent( double current )
+void Controller::setCurrent( double current )
 {
 	if( current <= 100.0 && current >= 0.0){
 		// The current needs to be in the range of 0-31
@@ -428,7 +407,7 @@ void uStepperS::setCurrent( double current )
 	driver.updateCurrent();
 }
 
-void uStepperS::setHoldCurrent( double current )
+void Controller::setHoldCurrent( double current )
 {
 	// The current needs to be in the range of 0-31
 	if( current <= 100.0 && current >= 0.0){
@@ -442,7 +421,7 @@ void uStepperS::setHoldCurrent( double current )
 	driver.updateCurrent();
 }
 
-void uStepperS::runContinous( bool direction )
+void Controller::runContinous( bool direction )
 {
 	this->driver.setDeceleration( (uint32_t)( this->maxDeceleration ) );
 	this->driver.setAcceleration( (uint32_t)(this->maxAcceleration ) );
@@ -455,12 +434,12 @@ void uStepperS::runContinous( bool direction )
 	this->driver.setDirection( direction );
 }
 
-float uStepperS::angleMoved ( void )
+float Controller::angleMoved ( void )
 {
 	return this->encoder.getAngleMoved();
 }
 
-void uStepperS::stop( bool mode){
+void Controller::stop( bool mode){
 
 	if(mode == HARD)
 	{
@@ -477,7 +456,7 @@ void uStepperS::stop( bool mode){
 	}
 }
 
-void uStepperS::filterSpeedPos(posFilter_t *filter, int32_t steps)
+void Controller::filterSpeedPos(posFilter_t *filter, int32_t steps)
 {
 	filter->posEst += filter->velEst * ENCODERINTPERIOD;	
 	filter->posError = (float)steps - filter->posEst;
@@ -487,7 +466,7 @@ void uStepperS::filterSpeedPos(posFilter_t *filter, int32_t steps)
 
 void TIMER1_COMPA_vect(void) {
 /*
-	uStepperS * pointer = uStepperS::getInstance();
+	Controller * pointer = Controller::getInstance();
 
 	pointer->encoder.captureAngle();
 	
@@ -511,25 +490,25 @@ void TIMER1_COMPA_vect(void) {
 */
 }
 
-void uStepperS::setControlThreshold(float threshold)
+void Controller::setControlThreshold(float threshold)
 {
 	this->controlThreshold = threshold;
 }
-void uStepperS::enablePid(void)
+void Controller::enablePid(void)
 {
 	cli();
 	this->pidDisabled = 0;
 	sei();
 }
 
-void uStepperS::disablePid(void)
+void Controller::disablePid(void)
 {
 	cli();
 	this->pidDisabled = 1;
 	sei();
 }
 
-float uStepperS::moveToEnd(bool dir, float rpm, int8_t threshold)
+float Controller::moveToEnd(bool dir, float rpm, int8_t threshold)
 {
 	// Lowest reliable speed for stallguard
 	if (rpm < 10.0)
@@ -560,7 +539,7 @@ float uStepperS::moveToEnd(bool dir, float rpm, int8_t threshold)
 	return abs(length);
 }
 
-float uStepperS::getPidError(void)
+float Controller::getPidError(void)
 {
 	return this->currentPidError;
 }
