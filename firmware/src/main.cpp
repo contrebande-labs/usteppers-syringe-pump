@@ -71,7 +71,7 @@ void setup() {
   controller->setup(
     STEPS_PER_ROTATION, // stepsPerRevolution  Number of fullsteps per revolution
     true, // setHome When set to true, the encoder position is Reset. When set to false, the encoder position is not reset.
-    80, // runCurrent  Sets the current (in percent) to use while motor is running, default = 50.0
+    85, // runCurrent  Sets the current (in percent) to use while motor is running, default = 50.0
     10 // holdCurrent Sets the current (in percent) to use while motor is NOT running, default = 30.0
   );
 
